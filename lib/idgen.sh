@@ -134,7 +134,8 @@ describe_id() {            # describe_id "I31G82N23M65S03"
   fi
   if [ -n "$SP_MEM" ]; then
     line="${MEM_DESC[$SP_MEM]:-}"
-    ddr="${DETECTED_DDR:-${CPU_MEMGEN[$SP_CPU]:-}}"
+    # only index CPU_MEMGEN when SP_CPU is non-empty (empty subscript errors under set -u)
+    ddr="${DETECTED_DDR:-${SP_CPU:+${CPU_MEMGEN[$SP_CPU]:-}}}"
     if [ -n "$line" ]; then printf '内存: %s%s\n' "${ddr:+$ddr }" "$line"
     else printf '内存: (未知代码 %s)\n' "$SP_MEM"; fi
   fi

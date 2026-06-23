@@ -226,7 +226,9 @@ detect_net() {
     if ! [[ "$spd" =~ ^[0-9]+$ ]] || [ "$spd" -le 0 ]; then
       # link down: try ethtool, else count as unknown
       if command -v ethtool >/dev/null 2>&1; then
-        spd="$(ethtool "$dev" 2>/dev/null | awk -F'[: ]+' '/Speed:/{gsub(/[^0-9]/,"",$3);print $3}' )"
+        # indent-/field-agnostic: ethtool indents with a TAB; grab the first number
+        # on the Speed: line ("Speed: Unknown!" yields none -> stays down).
+        spd="$(ethtool "$dev" 2>/dev/null | awk '/Speed:/{if(match($0,/[0-9]+/)){print substr($0,RSTART,RLENGTH);exit}}')"
       fi
     fi
     if [[ "$spd" =~ ^[0-9]+$ ]] && [ "$spd" -gt 0 ]; then
