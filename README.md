@@ -10,14 +10,15 @@
 
 ```bash
 # 1) 下载并解压（免客户端，公共读）
-wget https://oss-cn-shanghai.siflow.cn/scitix-release/catcher.tar.gz
+wget https://oss-cn-shanghai.siflow.cn/scitix-release/catcher.tar.gz   # 上海
+#   或 https://oss-ap-southeast.scitix.ai/scitix-release/catcher.tar.gz  # 马来镜像
 tar -xzf catcher.tar.gz && cd catcher
 
 # 2) 扫描本机 -> 机型ID + 配置说明（建议 sudo，内存检测需 root）
 sudo ./catcher.bash detect
 ```
 
-输出示例（8×RTX5090 机器）：
+`detect` 输出示例（8×RTX5090 机器）：
 
 ```
 ==================== 实际硬件检测 (detected) ====================
@@ -38,6 +39,31 @@ sudo ./catcher.bash detect
   网卡: 100G双口以太网卡*1
 ================================================================
 ```
+
+> ⚠️ **不加 sudo 也能跑**，但内存检测（`dmidecode`）需 root：无 root 时内存只显示总量
+> （如 `1001GB total`）、机型ID 会少了 `M..`/`S..` 段并标「不完整」。要完整机型ID 就 `sudo`。
+
+其它三个命令的期望输出：
+
+```bash
+sudo ./catcher.bash id            # 只打印机型ID，适合脚本
+# -> I57G90N13M63S10
+
+./catcher.bash describe I57G90N23M65S10   # 反解析：ID -> 配置（免硬件、免 root）
+# -> CPU: Intel 6530 *2
+#    内存: DDR5 64G *32
+#    系统盘: SSD 960G*2（需支持raid1）
+#    数据盘: SSD 3.84T*2
+#    GPU: 5090 *8
+#    网卡: 25G双口以太网卡*1
+#    IB卡: HDR 200G单口网卡*2
+
+sudo ./catcher.bash json          # 机器可读 JSON，含每部件 code/detected/key + config
+# -> { "model_id": "I57G90N13M63S10", "components": { "cpu": {...}, "gpu": {...}, ... }, "config": "..." }
+```
+
+> 各部件如何从硬件归一化成机型ID（含显存/容量阈值、就近贴桶 ±8%、以太/IB 划分、RAID1 兜底等），
+> 见 [`docs/MATCHING.md`](docs/MATCHING.md)。
 
 ---
 
