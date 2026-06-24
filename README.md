@@ -41,6 +41,38 @@ sudo ./catcher.bash detect
 
 ---
 
+## 运行依赖与权限
+
+### 依赖的工具（都是发行版自带或一条命令可装）
+
+| 工具 | 用途 | 必需性 | 缺失时 | 安装（Ubuntu/Debian · RHEL/CentOS） |
+|------|------|--------|--------|--------------------------------------|
+| `bash` ≥ 4 | 运行脚本（用到关联数组） | **必需** | 无法运行 | 自带（本工具在 bash 5.1 实测） |
+| `lscpu` | 读 CPU 型号/插槽数 | 强烈建议 | CPU 部件留空并提示 | `util-linux`（一般自带） |
+| `lsblk` | 读硬盘容量/SSD-HDD | 强烈建议 | 硬盘部件留空并提示 | `util-linux`（一般自带） |
+| `dmidecode` | 读**每根**内存条容量/DDR代 | 内存检测必需 | 内存只给总量并提示需 root | `apt install dmidecode` · `yum install dmidecode` |
+| `nvidia-smi` | 读 GPU 型号/显存 | GPU 机器需要 | 无 NVIDIA 驱动时跳过 GPU | 随 NVIDIA 驱动安装（无需 CUDA toolkit） |
+| `ethtool` | 读以太网口链路速率 | 建议 | 改用 `/sys/.../speed`，链路 down 的口可能漏报 | `apt install ethtool` · `yum install ethtool` |
+| `lspci` | 辅助识别 NIC/GPU 存在 | 可选 | 不影响主流程 | `pciutils`（一般自带） |
+| `jq` | 输出更规整的 JSON | 可选 | 自动回退到内置 JSON 拼装 | `apt install jq` · `yum install jq` |
+
+> InfiniBand 速率/代际(HDR/NDR) 直接读 `/sys/class/infiniband/`，不依赖额外命令；没有 IB 时自动跳过。
+
+### 权限：只有内存检测需要 root
+
+```bash
+sudo ./catcher.bash detect      # 推荐：完整结果（含每根内存条）
+./catcher.bash detect           # 非 root 也能跑：CPU/GPU/网卡/硬盘照常，内存只给总量并提示
+```
+
+- **为什么**：内存条逐根布局来自 `dmidecode`，它读固件 SMBIOS/DMI 表，必须 root；`/proc/meminfo`
+  只有总量，区分不了 `16×64G` 和 `32×32G`。其余探测（`lscpu`/`lsblk`/`nvidia-smi`/`sysfs`）都是**普通用户只读**即可。
+- **本工具只读、不改硬件、不联网**：纯粹采集 + 计算 + 写本地 `result/*.json`，可安全在生产物理机上跑。
+- **非交互环境**（CI、无 TTY 的会话）里 `sudo` 会要密码而失败 —— 请在真实终端手动 `sudo` 跑一次，
+  或为 `dmidecode` 配置 NOPASSWD。
+
+---
+
 ## 四个命令
 
 | 命令 | 作用 |
@@ -50,8 +82,7 @@ sudo ./catcher.bash detect
 | `./catcher.bash describe <机型ID>` | 反解析：机型ID → 配置清单（如 `describe I31G82N23M65S03`） |
 | `sudo ./catcher.bash json` | 扫描 → 只输出机器可读 JSON |
 
-> **为什么要 `sudo`**：内存条布局来自 `dmidecode`（读固件 SMBIOS 表，需 root）。
-> 其余探测都不需要 root；非 root 跑也能出 CPU/GPU/网卡/硬盘，只是内存会提示"只能拿到总量"。
+> `describe` 不读硬件、无需 root；`detect`/`id`/`json` 建议 `sudo`（原因见上「运行依赖与权限」）。
 
 ---
 
